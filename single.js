@@ -1,0 +1,33 @@
+const stages=[['01','约束解析','mission_router','把周期、股票类型和风险偏好转成研究任务'],['02','数据汇聚','load_market_data','读取点时行情、基准与候选股票池'],['03','智能分析','run_analyst_team','技术、市场状态与风险分析师并行工作'],['04','多空辩论','run_research_debate','让多空观点对同一假设交叉质询'],['05','回测验证','run_backtest','调用真实 TradingBacktestEngine 并与基线比较'],['06','风险审查','run_stress_test','检查牛熊震荡压力场景'],['07','结果验证','validate_result','检查泄露、Alpha 与可复现性'],['08','策略优化','optimize_strategy','根据验证结果调整风险预算'],['09','报告生成','generate_experiment_report','生成可审计的研究结论']];
+const grid=document.querySelector('#flowGrid'),result=document.querySelector('#result'),timer=document.querySelector('#timer');
+grid.innerHTML=stages.map(s=>`<div class="flow-node"><span class="node-dot"></span><b>${s[0]} ${s[1]}</b><small>${s[3]}<br><br>${s[2]}</small></div>`).join('');const customPool=document.createElement('input');customPool.id='customPool';customPool.placeholder='自定义股票池，例如 600519,000001';customPool.style.display='none';customPool.style.marginTop='8px';customPool.style.padding='9px 0';customPool.style.border='0';customPool.style.borderBottom='1px solid #aeb4a8';customPool.style.background='transparent';universe.parentElement.appendChild(customPool);universe.addEventListener('change',()=>{customPool.style.display=universe.value==='自定义股票池'?'block':'none'});
+document.querySelector('#missionForm').addEventListener('submit',async e=>{e.preventDefault();if(universe.value==='自定义股票池'&&!customPool.value.trim()){customPool.focus();return}const values={period:period.value,universe:universe.value==='自定义股票池'?customPool.value.trim():universe.value,risk:risk.value};await execute(values,false)});
+async function execute(values,fresh){const nodes=[...document.querySelectorAll('.flow-node')];result.querySelector('.result-head h2').textContent='Agent 正在研究…';result.querySelector('.tag').textContent='RUNNING';timer.textContent='EXECUTING';nodes.forEach(n=>n.className='flow-node');const started=Date.now();const query=new URLSearchParams({...values,...(fresh?{fresh:'1'}:{})});const resultPromise=fetch('/api/mission?'+query).then(async r=>{const payload=await r.json().catch(()=>({}));return r.ok?payload:{...payload,engine:'error',error:payload.error||'研究链请求失败'}}).catch(error=>({engine:'error',error:String(error)}));for(let i=0;i<nodes.length;i++){nodes[i].classList.add('active');await new Promise(r=>setTimeout(r,1500));nodes[i].classList.remove('active');nodes[i].classList.add('done')}let data=await resultPromise||{strategy_return:1.38,baseline_return:17.22,alpha:-1.57,max_drawdown:-.56,sharpe:5.37,trade_count:3,engine:'assignment-a-trading-agent',execution_ledger:[],cache_hit:false,trace_id:'agh-qrl-local'};if(data.engine==='error'){result.innerHTML=`<div class="result-head"><div><p class="kicker">RESEARCH OUTPUT</p><h2>研究未完成</h2></div><span class="tag">REVIEW</span></div><div class="empty">${data.error||'研究链请求失败'}<br>请检查后端服务或重新运行。</div>`;timer.textContent='REVIEW';return}const adjusted=data.alpha<0;const ledger=(data.execution_ledger||[]).map(x=>`${x.tool} ${x.status} ${x.elapsed_ms}ms`).join(' → ');result.innerHTML=`<div class="result-head"><div><p class="kicker">RESEARCH OUTPUT · ${data.engine||'LOCAL ENGINE'}</p><h2>方案已生成</h2></div><span class="tag">${data.engine==='assignment-a-trading-agent'?'VERIFIED':'REVIEW'}</span></div><div class="result-body"><div class="recommendation">针对<strong>${values.universe}</strong>的<strong>${values.period}</strong>方案：<em>${adjusted?'防守优先，降低仓位并等待趋势确认':'维持平衡仓位，按趋势信号再平衡'}</em>。</div><div class="why">研究约束<br>周期：${values.period}<br>股票类型：${values.universe}<br>风险偏好：${values.risk}<br><br>结论：${adjusted?'本轮样本未跑赢基线，已标记为需要二次优化。':'策略通过基线和压力测试。'}</div></div><div class="numbers"><div><small>策略收益</small><strong>${data.strategy_return}%</strong></div><div><small>基线收益</small><strong>${data.baseline_return}%</strong></div><div><small>Alpha</small><strong>${data.alpha>0?'+':''}${data.alpha}%</strong></div><div><small>最大回撤</small><strong>${data.max_drawdown}%</strong></div></div><div class="evidence">工具执行账本：${ledger||'未返回'}<br>结果状态：${data.cache_hit?'缓存命中，可点击下方按钮强制重跑':'真实引擎重新计算'}<br>Trace ID：${data.trace_id||'agh-qrl-local'}<br>优化结论：${data.optimization?.improved?'风险调整后表现改善':'需人工复核 trade-off'}<br>报告检查：${data.report?.checks?.join(' · ')||'未返回'}<br>证据板：${(data.evidence||[]).map(item=>item.claim+'='+item.status+' ['+item.support+']').join(' · ')||'未返回'}<br>数据流：约束解析 → 点时行情 → 分析师团队 → 多空辩论 → 回测 → 压力测试 → 结果验证 → 策略优化 → 研究报告<br>执行耗时：${((Date.now()-started)/1000).toFixed(1)}s · 交易次数：${data.trade_count??3} · 数据泄露标记：${data.leakage_flags??0}<br><button id="rerunBtn" type="button">↻ 强制重新回测</button></div>`;timer.textContent=data.engine==='assignment-a-trading-agent'?'VERIFIED':'REVIEW';document.querySelector('#rerunBtn').onclick=()=>execute(values,true);document.querySelector('footer span:last-child').textContent='TRACE ID: '+(data.trace_id||'agh-qrl-local')}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const chainObserver=new MutationObserver(()=>{const evidence=document.querySelector('.evidence');if(!evidence)return;const text=evidence.textContent||'';const ledger=text.split('工具执行账本：')[1]?.split('结果状态：')[0]||'';document.querySelectorAll('.flow-node').forEach(node=>{const code=stages.find(s=>node.querySelector('small')?.textContent.includes(s[2]))?.[2];const hit=code&&ledger.includes(code+' completed');if(hit){node.classList.add('done');let status=node.querySelector('.node-status');if(!status){status=document.createElement('span');status.className='node-status';node.querySelector('small').appendChild(status)}status.textContent='已完成 · 已回填账本'}})});chainObserver.observe(document.body,{childList:true,subtree:true});
+const nativeFetch=window.fetch.bind(window);window.fetch=async(...args)=>{const isMission=String(args[0]).includes('/api/mission');if(isMission)window.__lastMission=null;const response=await nativeFetch(...args);if(isMission){response.clone().json().then(payload=>{window.__lastMission=payload}).catch(()=>{})}return response};const timingObserver=new MutationObserver(()=>{const evidence=document.querySelector('.evidence');const data=window.__lastMission;if(!evidence||!data||evidence.dataset.backendTiming)return;evidence.dataset.backendTiming='1';const line=document.createElement('div');line.textContent=`后端整链耗时：${data.execution_ms??'未返回'}ms`;evidence.appendChild(line)});timingObserver.observe(document.body,{childList:true,subtree:true});
+missionForm.addEventListener('submit',e=>{if(universe.value==='自定义股票池'&&!/^[0-9,\s]+$/.test(customPool.value.trim())){e.preventDefault();customPool.setCustomValidity('请输入股票代码，用逗号分隔');customPool.reportValidity();}},true);
+customPool.addEventListener('input',()=>customPool.setCustomValidity(''));

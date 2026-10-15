@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# Local backtest engine and machine-specific configuration
+.quant-cache/
+.agnes/
+*.local.*

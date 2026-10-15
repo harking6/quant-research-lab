@@ -1,0 +1,9 @@
+{
+  "name": "@agnes-examples/quant-research-tools",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {"test": "node contract_test.mjs"},
+  "exports": "./index.mjs",
+  "agnes": {"plugins": [{"export": "quantResearchTools", "id": "ext:agnes-examples/quant-research-tools", "inject": ["extension"]}]}
+}
